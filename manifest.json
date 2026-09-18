@@ -1,0 +1,35 @@
+{
+  "name": "WL-Inventory",
+  "short_name": "WL-Inventory",
+  "description": "เวียงหลวง หมูกระทะ & ซีฟู้ด - ระบบเช็คสต๊อกสินค้า",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FFF4E8",
+  "theme_color": "#FFF4E8",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
