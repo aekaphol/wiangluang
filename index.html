@@ -1292,6 +1292,7 @@ function renderOwnerPanel(main){
       </div>
       <button class="btn btn-ghost" id="exportCsv">ส่งออก CSV ตามช่วงวันที่</button>
       <button class="btn btn-ghost" id="exportRemitCsv">ส่งออก CSV ใบส่งเงิน</button>
+      <button class="btn btn-ghost" id="exportUsedCsv">ส่งออก CSV รายงาน "ใช้ไป" รายวัน</button>
       <button class="btn btn-ghost" id="exportJson">สำรองข้อมูล JSON</button>
       <label class="btn btn-ghost" style="cursor:pointer;">นำเข้าข้อมูลสำรอง<input type="file" id="importJson" accept="application/json" style="display:none;"></label>
       <button class="btn btn-danger" id="clearToday">ล้างข้อมูลวันนี้</button>
@@ -1331,6 +1332,12 @@ function renderOwnerPanel(main){
     const to = document.getElementById('csvTo').value;
     if(from && to && from>to){ toast('วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด'); return; }
     exportRemitCsv(from, to);
+  };
+  document.getElementById('exportUsedCsv').onclick = ()=>{
+    const from = document.getElementById('csvFrom').value;
+    const to = document.getElementById('csvTo').value;
+    if(from && to && from>to){ toast('วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด'); return; }
+    exportUsedCsv(from, to);
   };
   document.getElementById('exportJson').onclick = exportJson;
   document.getElementById('importJson').onchange = importJson;
@@ -1503,6 +1510,36 @@ function exportCsv(fromDate, toDate){
   if(count===0){ toast('ไม่พบข้อมูลในช่วงวันที่ที่เลือก'); return; }
   const rangePart = (fromDate||toDate) ? `${fromDate||'เริ่มต้น'}_ถึง_${toDate||'ล่าสุด'}` : todayStr();
   downloadFile(csv, `wiangluang-stock-${rangePart}.csv`, 'text/csv;charset=utf-8');
+}
+function exportUsedCsv(fromDate, toDate){
+  const esc = s => `"${String(s??'').replace(/"/g,'""')}"`;
+  // One row per day per item: เหลือเมื่อวาน + ซื้อเพิ่ม − เหลือวันนี้ = ใช้ไป (same formula as the summary page)
+  const finishedDays = Object.values(db.days)
+    .filter(d=>d.finished)
+    .sort((a,b)=> a.branch===b.branch ? a.date.localeCompare(b.date) : a.branch.localeCompare(b.branch));
+  let csv = '﻿' + ['branch','date','หมวด','รายการ','หน่วย','เหลือเมื่อวาน','ซื้อเพิ่ม','เหลือวันนี้','ใช้ไป','ต้นทุนต่อหน่วย','ต้นทุนใช้ไป'].join(',') + '\r\n';
+  let count = 0;
+  const cats = orderedCategoriesForCheck();
+  finishedDays.forEach(d=>{
+    if(fromDate && d.date<fromDate) return;
+    if(toDate && d.date>toDate) return;
+    const prev = prevDay(d.branch, d.date);
+    if(!prev) return;
+    cats.forEach(cat=>{
+      itemsByCat(cat.id).forEach(it=>{
+        const cur = d.remaining[it.id], yest = prev.remaining[it.id];
+        if(cur===undefined || yest===undefined) return;
+        const purchased = d.purchased[it.id] || 0;
+        const used = Math.max(0, yest + purchased - cur);
+        const cost = used * it.cost;
+        csv += [esc(d.branch), esc(d.date), esc(cat.name), esc(it.name), esc(it.unit), yest, purchased, cur, used, it.cost, cost].join(',') + '\r\n';
+        count++;
+      });
+    });
+  });
+  if(count===0){ toast('ไม่พบข้อมูล "ใช้ไป" ในช่วงวันที่ที่เลือก (ต้องปิดยอดอย่างน้อย 2 วันติดกัน)'); return; }
+  const rangePart = (fromDate||toDate) ? `${fromDate||'เริ่มต้น'}_ถึง_${toDate||'ล่าสุด'}` : todayStr();
+  downloadFile(csv, `wiangluang-used-${rangePart}.csv`, 'text/csv;charset=utf-8');
 }
 function exportRemitCsv(fromDate, toDate){
   const esc = s => `"${String(s??'').replace(/"/g,'""')}"`;
